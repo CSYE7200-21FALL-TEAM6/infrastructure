@@ -22,7 +22,14 @@ variable "key_pair_name" {
   default     = "csye7200"
 }
 
-variable "kafka_AMI_name" {
+variable "kafka_ami_name" {
   description = "kafka AMI name"
   type        = string
+  default     = "csye7200_kafka_*"
+}
+
+variable "zookeeper_ami_name" {
+  description = "zookeeper AMI name"
+  type        = string
+  default     = "csye7200_zookeeper_*"
 }
