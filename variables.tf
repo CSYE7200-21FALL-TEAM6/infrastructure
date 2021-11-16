@@ -33,3 +33,9 @@ variable "zookeeper_ami_name" {
   type        = string
   default     = "csye7200_zookeeper_*"
 }
+
+variable "webapp_ami_name" {
+  description = "webapp AMI name"
+  type        = string
+  default     = "csye7200_webapp_*"
+}
