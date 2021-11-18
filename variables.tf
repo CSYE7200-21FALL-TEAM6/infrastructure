@@ -33,3 +33,29 @@ variable "zookeeper_ami_name" {
   type        = string
   default     = "csye7200_zookeeper_*"
 }
+
+variable "webapp_ami_name" {
+  description = "webapp AMI name"
+  type        = string
+  default     = "csye7200_webapp_*"
+}
+
+variable "consumer_key" {
+  description = "twitter consumer key"
+  type        = string
+}
+
+variable "consumer_secret" {
+  description = "twitter consumer secret"
+  type        = string
+}
+
+variable "twitter_access_token" {
+  description = "twitter access token"
+  type        = string
+}
+
+variable "twitter_access_secret" {
+  description = "twitter access secret"
+  type        = string
+}
