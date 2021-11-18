@@ -112,9 +112,16 @@ resource "aws_instance" "webapp" {
 #! /bin/bash
 mkdir /home/ubuntu/webapp/
 sudo chmod -R 777 /home/ubuntu/webapp/
+echo -e "CONSUMER_KEY=${var.consumer_key}" >> /home/ubuntu/webapp/.env
+echo -e "CONSUMER_SECRET=${var.consumer_secret}" >> /home/ubuntu/webapp/.env
+echo -e "TWITTER_ACCESS_TOKEN=${var.twitter_access_token}" >> /home/ubuntu/webapp/.env
+echo -e "TWITTER_ACCESS_SECRET=${var.twitter_access_secret}" >> /home/ubuntu/webapp/.env
 echo -e "KAFKA_IP0=${aws_instance.kafka["0"].private_ip}" >> /home/ubuntu/webapp/.env
 echo -e "KAFKA_IP1=${aws_instance.kafka["1"].private_ip}" >> /home/ubuntu/webapp/.env
 echo -e "KAFKA_IP2=${aws_instance.kafka["2"].private_ip}" >> /home/ubuntu/webapp/.env
+echo -e "DB_USER=${aws_db_instance.mysql.username}" >> /home/ubuntu/webapp/.env
+echo -e "DB_PW=${aws_db_instance.mysql.password}" >> /home/ubuntu/webapp/.env
+echo -e "DB_HOST=${aws_db_instance.mysql.address}" >> /home/ubuntu/webapp/.env
 echo -e "{
     \"agent\": {
         \"metrics_collection_interval\": 10,
