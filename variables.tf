@@ -40,6 +40,12 @@ variable "webapp_ami_name" {
   default     = "csye7200_webapp_*"
 }
 
+variable "spark_ami_name" {
+  description = "spark AMI name"
+  type        = string
+  default     = "csye7200_spark_*"
+}
+
 variable "consumer_key" {
   description = "twitter consumer key"
   type        = string
