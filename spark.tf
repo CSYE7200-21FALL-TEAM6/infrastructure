@@ -59,14 +59,18 @@ data "aws_ami" "spark_ami" {
   owners = [var.AMI_owner]
 }
 
-resource "aws_instance" "spark" {
-  ami                     = data.aws_ami.spark_ami.id
+
+resource "aws_launch_configuration" "as_conf" {
+  name_prefix                 = "csye6225-spark-lc-"
+  image_id                     = data.aws_ami.spark_ami.id
   instance_type           = "t2.medium"
-  disable_api_termination = false
-  subnet_id               = aws_subnet.subnet["us-east-1a"].id
-  vpc_security_group_ids  = [aws_security_group.spark_sg.id]
+  security_groups  = [aws_security_group.spark_sg.id]
   iam_instance_profile    = aws_iam_instance_profile.webapp_profile.name
   key_name                = var.key_pair_name
+  associate_public_ip_address = true
+  root_block_device {
+    encrypted  = true
+  }
   user_data               = <<EOF
 #! /bin/bash
 echo -e "#!/usr/bin/env bash" >> /home/ubuntu/spark-3.2.0-bin-hadoop3.2-scala2.13/conf/spark-env.sh
@@ -126,13 +130,80 @@ echo -e "MYSQL_URL=${aws_db_instance.mysql.address}" >> /home/ubuntu/.env
 echo -e "MYSQL_USER=${aws_db_instance.mysql.username}" >> /home/ubuntu/.env
 echo -e "MYSQL_PW=${aws_db_instance.mysql.password}" >> /home/ubuntu/.env
 EOF
-
-  root_block_device {
-    volume_size           = 8
-    volume_type           = "gp2"
-    delete_on_termination = true
+  lifecycle {
+    create_before_destroy = true
   }
-  tags = {
-    Name = "spark"
+}
+
+resource "aws_autoscaling_group" "asg_spark" {
+  name                 = "csye6225-asg-spark"
+  launch_configuration = aws_launch_configuration.as_conf.name
+  min_size             = 1
+  max_size             = 8
+  desired_capacity     = 1
+  default_cooldown     = 600
+  vpc_zone_identifier  = [aws_subnet.subnet["us-east-1a"].id]
+  target_group_arns    = ["${aws_lb_target_group.spark_target_group.arn}"]
+  tag {
+    key                 = "Name"
+    value               = "spark"
+    propagate_at_launch = true
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_policy" "agents-scale-up" {
+  name                   = "agents-scale-up"
+  scaling_adjustment     = 1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 300
+  autoscaling_group_name = aws_autoscaling_group.asg_spark.name
+}
+
+resource "aws_autoscaling_policy" "agents-scale-down" {
+  name                   = "agents-scale-down"
+  scaling_adjustment     = -1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 300
+  autoscaling_group_name = aws_autoscaling_group.asg_spark.name
+}
+
+
+resource "aws_cloudwatch_metric_alarm" "CPU-high" {
+  alarm_name          = "mem-util-high-agents"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "60"
+  alarm_description   = "This metric monitors ec2 CPU for high utilization on agent hosts"
+  alarm_actions = [
+    "${aws_autoscaling_policy.agents-scale-up.arn}"
+  ]
+  dimensions = {
+    AutoScalingGroupName = "${aws_autoscaling_group.asg_spark.name}"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory-low" {
+  alarm_name          = "mem-util-low-agents"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "5"
+  alarm_description   = "This metric monitors ec2 memory for low utilization on agent hosts"
+  alarm_actions = [
+    "${aws_autoscaling_policy.agents-scale-down.arn}"
+  ]
+  dimensions = {
+    AutoScalingGroupName = "${aws_autoscaling_group.asg_spark.name}"
   }
 }
